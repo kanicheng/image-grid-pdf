@@ -94,7 +94,7 @@ body {
 
 .field { margin-bottom: 14px; }
 .field:last-child { margin-bottom: 0; }
-.field > label { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-soft); margin-bottom: 6px; }
+.field > label:not(.switch) { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-soft); margin-bottom: 6px; }
 .field__hint { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.5; }
 .field__row { display: flex; gap: 8px; }
 .field__row > input[type="text"] { flex: 1; }
