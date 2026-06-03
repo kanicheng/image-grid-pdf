@@ -11,10 +11,11 @@
 
   const FONT_STACK = '"Noto Sans TC", system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif';
 
-  // 字級（mm）與間距（mm）— 預覽與 PDF 共用
+  // 字級（mm）與間距（mm）— 預覽與 PDF 共用（TITLE_MM/DATE_MM 為可調字級的預設值）
   const TITLE_MM = 8;
   const SUB_MM = 4.5;
   const DATE_MM = 4.8;
+  const SUB_RATIO = SUB_MM / TITLE_MM; // 副標題相對標題的比例，隨標題字級等比縮放
   const CAPTION_MM = 3.2;
   const TITLE_GAP_MM = 5;   // 標題區與圖片格之間（預設值，可由使用者調整）
   const DATE_GAP_MM = 4;    // 圖片格與日期之間
@@ -33,6 +34,8 @@
       rows: 3,
       fit: "cover",         // cover | contain
       titleAlign: "left",   // left | center | right（標題與副標題對齊）
+      titleSize: TITLE_MM,  // 標題字級（mm）；副標題依 SUB_RATIO 等比
+      dateSize: DATE_MM,    // 日期字級（mm）
       showCaptions: false,
       captionType: "filename", // filename | number
       margin: 12,
@@ -72,6 +75,7 @@
     perPageHint: $("perPageHint"),
     showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"),
     margin: $("margin"), gap: $("gap"), titleGap: $("titleGap"),
+    titleSize: $("titleSize"), dateSize: $("dateSize"),
     quality: $("quality"), qualityLabel: $("qualityLabel"),
     cellBorder: $("cellBorder"), resetBtn: $("resetSettings"),
     dropzone: $("dropzone"), fileInput: $("fileInput"),
@@ -114,9 +118,9 @@
     const subtitle = s.subtitle.trim();
     const date = s.date.trim();
 
-    const titleFit = fitFontMm(title, TITLE_MM, innerW, 900);
-    const subFit = fitFontMm(subtitle, SUB_MM, innerW, 700);
-    const dateFit = fitFontMm(date, DATE_MM, innerW, 700);
+    const titleFit = fitFontMm(title, s.titleSize, innerW, 900);
+    const subFit = fitFontMm(subtitle, s.titleSize * SUB_RATIO, innerW, 700);
+    const dateFit = fitFontMm(date, s.dateSize, innerW, 700);
 
     const titleHmm = title ? titleFit * 1.3 : 0;
     const subHmm = subtitle ? subFit * 1.4 : 0;
@@ -729,6 +733,8 @@
     el.margin.value = s.margin;
     el.gap.value = s.gap;
     el.titleGap.value = s.titleGap;
+    el.titleSize.value = s.titleSize;
+    el.dateSize.value = s.dateSize;
     el.quality.value = s.dpi;
     el.qualityLabel.textContent = qualityWord(s.dpi);
     el.showCaptions.checked = s.showCaptions;
@@ -788,6 +794,21 @@
     el.margin.addEventListener("input", () => { state.settings.margin = clampNum(el.margin, 0, 40); render(); });
     el.gap.addEventListener("input", () => { state.settings.gap = clampNum(el.gap, 0, 30); render(); });
     el.titleGap.addEventListener("input", () => { state.settings.titleGap = clampNum(el.titleGap, 0, 60); render(); });
+    // 字級（允許小數）：輸入時若在合理範圍即更新（不改寫輸入框，方便打小數），離開時才正規化顯示
+    const bindSize = (input, key, min, max) => {
+      input.addEventListener("input", () => {
+        const v = parseFloat(input.value);
+        if (!isNaN(v) && v >= min && v <= max) { state.settings[key] = v; render(); }
+      });
+      input.addEventListener("change", () => {
+        let v = parseFloat(input.value);
+        if (isNaN(v)) v = state.settings[key];
+        v = Math.max(min, Math.min(max, v));
+        state.settings[key] = v; input.value = String(v); render();
+      });
+    };
+    bindSize(el.titleSize, "titleSize", 4, 24);
+    bindSize(el.dateSize, "dateSize", 3, 16);
     el.quality.addEventListener("input", () => {
       state.settings.dpi = parseInt(el.quality.value, 10);
       el.qualityLabel.textContent = qualityWord(state.settings.dpi);
