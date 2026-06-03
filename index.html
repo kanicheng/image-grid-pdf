@@ -55,10 +55,25 @@
           </div>
           <p class="field__hint">同時套用到標題與副標題。</p>
         </div>
+        <div class="field field--grid2">
+          <div>
+            <label for="titleSize">標題文字大小 (mm)</label>
+            <input type="number" id="titleSize" min="4" max="24" step="0.5" value="8" />
+          </div>
+          <div>
+            <label for="titleGap">標題與圖片間距 (mm)</label>
+            <input type="number" id="titleGap" min="0" max="60" step="1" value="5" />
+          </div>
+        </div>
+        <p class="field__hint">副標題會隨標題大小等比縮放；「標題與圖片間距」為標題與下方圖片的留白。</p>
         <div class="field">
           <label for="datePicker">日期（右下）</label>
           <input type="date" id="datePicker" aria-label="選擇日期" />
           <p class="field__hint">點選日曆選擇日期；留空則 PDF 不顯示日期。</p>
+        </div>
+        <div class="field">
+          <label for="dateSize">日期文字大小 (mm)</label>
+          <input type="number" id="dateSize" min="3" max="16" step="0.5" value="4.8" />
         </div>
       </section>
 
@@ -125,22 +140,6 @@
               <input type="number" id="gap" min="0" max="30" step="1" value="6" />
             </div>
           </div>
-          <div class="field">
-            <label for="titleGap">標題與圖片間距 (mm)</label>
-            <input type="number" id="titleGap" min="0" max="60" step="1" value="5" />
-            <p class="field__hint">標題（含副標題）與下方圖片之間的留白。</p>
-          </div>
-          <div class="field field--grid2">
-            <div>
-              <label for="titleSize">標題文字大小 (mm)</label>
-              <input type="number" id="titleSize" min="4" max="24" step="0.5" value="8" />
-            </div>
-            <div>
-              <label for="dateSize">日期文字大小 (mm)</label>
-              <input type="number" id="dateSize" min="3" max="16" step="0.5" value="4.8" />
-            </div>
-          </div>
-          <p class="field__hint">副標題會隨標題大小等比例縮放。</p>
           <div class="field">
             <label for="quality">輸出畫質 <span id="qualityLabel" class="muted">標準</span></label>
             <input type="range" id="quality" min="96" max="300" step="6" value="150" />
