@@ -122,6 +122,24 @@ input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
 }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 
+/* iOS Safari/WebKit：<input type="date"> 會用原生預設寬度、不甩 width:100%，
+   在窄容器（手機）會超出邊界，且日期值預設置中。
+   用 @supports(-webkit-touch-callout) 限定 iOS（桌機不會命中），關掉原生外觀
+   讓它遵守容器寬度、日期值靠左，桌機的原生日曆圖示完全不受影響。 */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
+  }
+}
+
 /* Segmented control */
 .segmented {
   display: inline-flex;
