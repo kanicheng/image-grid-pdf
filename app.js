@@ -21,11 +21,10 @@
   const CAPTION_GAP_MM = 1; // 圖片與其標籤之間
 
   const PREVIEW_PAGE_CAP = 24; // 預覽最多顯示頁數（PDF 不受限）
+  const STORAGE_KEY = "image-grid-pdf:v1"; // localStorage 鍵，用於設定持久化
 
-  // ---- 狀態 ----
-  const state = {
-    images: [],            // { id, name, file, url }
-    settings: {
+  function defaultSettings() {
+    return {
       title: "",
       subtitle: "",
       date: "",
@@ -40,7 +39,18 @@
       titleGap: TITLE_GAP_MM, // 標題與圖片之間的留白（mm）
       dpi: 150,
       cellBorder: false,
-    },
+    };
+  }
+
+  function todayStr() {
+    const t = new Date();
+    return `${t.getFullYear()}/${String(t.getMonth() + 1).padStart(2, "0")}/${String(t.getDate()).padStart(2, "0")}`;
+  }
+
+  // ---- 狀態 ----
+  const state = {
+    images: [],            // { id, name, file, url }
+    settings: defaultSettings(),
     zoom: 1,
   };
 
@@ -57,7 +67,7 @@
     showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"),
     margin: $("margin"), gap: $("gap"), titleGap: $("titleGap"),
     quality: $("quality"), qualityLabel: $("qualityLabel"),
-    cellBorder: $("cellBorder"),
+    cellBorder: $("cellBorder"), resetBtn: $("resetSettings"),
     dropzone: $("dropzone"), fileInput: $("fileInput"),
     thumbs: $("thumbs"), imgCount: $("imgCount"), clearAll: $("clearAll"),
     pages: $("pages"), previewEmpty: $("previewEmpty"), previewScroll: $("previewScroll"),
@@ -142,6 +152,7 @@
 
   /* ===================== 預覽（HTML，鏡像 PDF 幾何） ===================== */
   function render() {
+    persistSettings(); // 任何設定/縮放變更都會走到 render，藉此持久化（已防抖）
     const s = state.settings;
     const L = computeLayout(s);
     const pp = 2.6 * state.zoom; // px per mm
@@ -644,14 +655,92 @@
     });
   }
 
+  /* ===================== 設定持久化（localStorage） ===================== */
+  // 這些屬於「每次重來」的內容，不持久化：日期、標題、副標題
+  const NON_PERSISTED = ["date", "title", "subtitle"];
+  let persistTimer = 0;
+  function persistSettings() {
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      try {
+        const persistable = {};
+        for (const k of Object.keys(state.settings)) {
+          if (!NON_PERSISTED.includes(k)) persistable[k] = state.settings[k];
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings: persistable, zoom: state.zoom }));
+      } catch (e) {
+        console.warn("無法儲存設定（localStorage 不可用）：", e);
+      }
+    }, 300);
+  }
+
+  function loadSettings() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data && data.settings && typeof data.settings === "object") {
+        for (const k of Object.keys(state.settings)) {
+          if (NON_PERSISTED.includes(k)) continue; // 日期/標題/副標題不還原
+          const v = data.settings[k];
+          // 只接受型別相符的值，忽略損壞或舊版殘留資料
+          if (v !== undefined && v !== null && typeof v === typeof state.settings[k]) {
+            state.settings[k] = v;
+          }
+        }
+      }
+      if (typeof data.zoom === "number" && isFinite(data.zoom)) {
+        state.zoom = Math.max(0.5, Math.min(1.5, data.zoom));
+      }
+    } catch (e) {
+      console.warn("無法讀取已儲存的設定：", e);
+    }
+  }
+
+  // 把目前 state.settings 同步到所有控制項（程式化設值不會觸發事件，故不會造成迴圈）
+  function syncSegment(setting, value) {
+    document.querySelectorAll(`.segmented__btn[data-setting="${setting}"]`).forEach((b) => {
+      const on = b.dataset.value === value;
+      b.classList.toggle("is-active", on);
+      b.setAttribute("aria-checked", on ? "true" : "false");
+      b.tabIndex = on ? 0 : -1;
+    });
+  }
+  function syncControlsFromState() {
+    const s = state.settings;
+    el.title.value = s.title;
+    el.subtitle.value = s.subtitle;
+    el.datePicker.value = /^\d{4}\/\d{2}\/\d{2}$/.test(s.date) ? s.date.replace(/\//g, "-") : "";
+    el.cols.value = s.cols;
+    el.rows.value = s.rows;
+    el.margin.value = s.margin;
+    el.gap.value = s.gap;
+    el.titleGap.value = s.titleGap;
+    el.quality.value = s.dpi;
+    el.qualityLabel.textContent = qualityWord(s.dpi);
+    el.showCaptions.checked = s.showCaptions;
+    el.captionTypeField.classList.toggle("is-hidden", !s.showCaptions);
+    el.cellBorder.checked = s.cellBorder;
+    syncSegment("orientation", s.orientation);
+    syncSegment("fit", s.fit);
+    syncSegment("captionType", s.captionType);
+  }
+
+  function resetSettings() {
+    if (!confirm("確定要把所有設定重設為預設值嗎？（已上傳的圖片不會受影響）")) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    state.settings = defaultSettings();
+    state.settings.date = todayStr();
+    state.zoom = 1;
+    syncControlsFromState();
+    render();
+    setStatus("已重設為預設值。", "ok");
+  }
+
   function init() {
-    // 預設日期 = 今天
-    const today = new Date();
-    const y = today.getFullYear();
-    const mo = String(today.getMonth() + 1).padStart(2, "0");
-    const da = String(today.getDate()).padStart(2, "0");
-    state.settings.date = `${y}/${mo}/${da}`;
-    el.datePicker.value = `${y}-${mo}-${da}`;
+    // 預設日期 = 今天（日期不持久化），再還原其他已儲存設定
+    state.settings.date = todayStr();
+    loadSettings();
 
     // 文字欄位
     el.title.addEventListener("input", () => { state.settings.title = el.title.value; scheduleRender(); });
@@ -726,6 +815,12 @@
 
     // 產出
     el.generate.addEventListener("click", generatePdf);
+
+    // 重設設定
+    el.resetBtn.addEventListener("click", resetSettings);
+
+    // 把已還原的設定同步到所有控制項（程式化設值不會觸發上面的事件）
+    syncControlsFromState();
 
     // 等字型載入完成再首次渲染（量字寬才準）
     const start = () => render();
