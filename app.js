@@ -32,6 +32,7 @@
       cols: 2,
       rows: 3,
       fit: "cover",         // cover | contain
+      titleAlign: "left",   // left | center | right（標題與副標題對齊）
       showCaptions: false,
       captionType: "filename", // filename | number
       margin: 12,
@@ -205,15 +206,16 @@
     page.style.width = mm(L.page.w);
     page.style.height = mm(L.page.h);
 
-    // 標題（左上）
+    // 標題（左上，可設定對齊）
     if (L.title) {
       const t = document.createElement("div");
       t.className = "page__title";
       t.textContent = L.title;
       t.style.left = mm(L.m);
       t.style.top = mm(L.m);
+      t.style.width = mm(L.innerW);
+      t.style.textAlign = s.titleAlign;
       t.style.fontSize = mm(L.titleFit);
-      t.style.maxWidth = mm(L.innerW);
       t.style.whiteSpace = "nowrap";
       page.appendChild(t);
 
@@ -223,8 +225,9 @@
         st.textContent = L.subtitle;
         st.style.left = mm(L.m);
         st.style.top = mm(L.m + L.titleHmm);
+        st.style.width = mm(L.innerW);
+        st.style.textAlign = s.titleAlign;
         st.style.fontSize = mm(L.subFit);
-        st.style.maxWidth = mm(L.innerW);
         st.style.whiteSpace = "nowrap";
         page.appendChild(st);
       }
@@ -440,12 +443,19 @@
       const work = document.createElement("canvas");
       const wctx = work.getContext("2d");
 
+      // 依對齊方式計算標題/副標題的水平起始 x（在內容寬度 innerW 內對齊）
+      const alignX = (wMm) => {
+        if (s.titleAlign === "center") return L.m + (L.innerW - wMm) / 2;
+        if (s.titleAlign === "right") return L.m + (L.innerW - wMm);
+        return L.m;
+      };
+
       for (let p = 0; p < pageCount; p++) {
         if (p > 0) doc.addPage();
 
-        // 標題（左上）
-        if (titleImg) doc.addImage(titleImg.dataUrl, "PNG", L.m, L.m, titleImg.wMm, titleImg.hMm);
-        if (subImg) doc.addImage(subImg.dataUrl, "PNG", L.m, L.m + L.titleHmm, subImg.wMm, subImg.hMm);
+        // 標題（可對齊：靠左/置中/靠右）
+        if (titleImg) doc.addImage(titleImg.dataUrl, "PNG", alignX(titleImg.wMm), L.m, titleImg.wMm, titleImg.hMm);
+        if (subImg) doc.addImage(subImg.dataUrl, "PNG", alignX(subImg.wMm), L.m + L.titleHmm, subImg.wMm, subImg.hMm);
         // 日期（右下）
         if (dateImg) doc.addImage(dateImg.dataUrl, "PNG", L.page.w - L.m - dateImg.wMm, L.page.h - L.m - dateImg.hMm, dateImg.wMm, dateImg.hMm);
 
@@ -726,6 +736,7 @@
     el.cellBorder.checked = s.cellBorder;
     syncSegment("orientation", s.orientation);
     syncSegment("fit", s.fit);
+    syncSegment("titleAlign", s.titleAlign);
     syncSegment("captionType", s.captionType);
   }
 

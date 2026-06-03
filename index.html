@@ -47,6 +47,15 @@
           <input type="text" id="subtitle" placeholder="選填，顯示在標題下方" autocomplete="off" />
         </div>
         <div class="field">
+          <label>標題對齊</label>
+          <div class="segmented" role="radiogroup" aria-label="標題對齊">
+            <button type="button" class="segmented__btn is-active" data-setting="titleAlign" data-value="left">靠左</button>
+            <button type="button" class="segmented__btn" data-setting="titleAlign" data-value="center">置中</button>
+            <button type="button" class="segmented__btn" data-setting="titleAlign" data-value="right">靠右</button>
+          </div>
+          <p class="field__hint">同時套用到標題與副標題。</p>
+        </div>
+        <div class="field">
           <label for="datePicker">日期（右下）</label>
           <input type="date" id="datePicker" aria-label="選擇日期" />
           <p class="field__hint">點選日曆選擇日期；留空則 PDF 不顯示日期。</p>
