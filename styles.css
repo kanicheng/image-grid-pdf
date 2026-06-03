@@ -122,23 +122,22 @@ input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
 }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 
-/* iOS Safari/WebKit：<input type="date"> 會用原生預設寬度、不甩 width:100%，
-   在窄容器（手機）會超出邊界，且日期值預設置中。
-   用 @supports(-webkit-touch-callout) 限定 iOS（桌機不會命中），關掉原生外觀
-   讓它遵守容器寬度、日期值靠左，桌機的原生日曆圖示完全不受影響。 */
-@supports (-webkit-touch-callout: none) {
-  input[type="date"] {
-    -webkit-appearance: none;
-    appearance: none;
-    min-width: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-  input[type="date"]::-webkit-date-and-time-value {
-    text-align: left;
-    margin: 0;
-  }
+/* <input type="date">：關閉原生外觀，讓 iOS Safari 也遵守 width:100%（修正手機上
+   原生控制項以預設寬度顯示而超出容器的問題）。日期值靠左並垂直置中。
+   桌機原生的日曆圖示在 appearance:none 下會消失，改由 app.js 點擊欄位用
+   showPicker() 開啟原生日曆，所有平台皆可點整欄開啟。 */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  cursor: pointer;
 }
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  line-height: 36px; /* = 內容高度（38px 邊框盒 - 上下各 1px 邊框），使日期值垂直置中 */
+  margin: 0;
+}
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
 
 /* Segmented control */
 .segmented {

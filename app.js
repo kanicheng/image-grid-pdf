@@ -770,6 +770,10 @@
       }
       scheduleRender();
     });
+    // appearance:none 後桌機沒有日曆圖示，改為點整個欄位即開啟原生日曆（iOS 本來點擊就會開，故無影響）
+    el.datePicker.addEventListener("click", () => {
+      try { if (typeof el.datePicker.showPicker === "function") el.datePicker.showPicker(); } catch (e) {}
+    });
 
     // 數字欄位
     const clampNum = (input, min, max) => {
