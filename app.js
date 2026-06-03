@@ -50,7 +50,7 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     title: $("title"), subtitle: $("subtitle"),
-    dateText: $("dateText"), datePicker: $("datePicker"),
+    datePicker: $("datePicker"),
     cols: $("cols"), rows: $("rows"),
     perPageHint: $("perPageHint"),
     showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"),
@@ -650,21 +650,19 @@
     const mo = String(today.getMonth() + 1).padStart(2, "0");
     const da = String(today.getDate()).padStart(2, "0");
     state.settings.date = `${y}/${mo}/${da}`;
-    el.dateText.value = state.settings.date;
     el.datePicker.value = `${y}-${mo}-${da}`;
 
     // 文字欄位
     el.title.addEventListener("input", () => { state.settings.title = el.title.value; scheduleRender(); });
     el.subtitle.addEventListener("input", () => { state.settings.subtitle = el.subtitle.value; scheduleRender(); });
-    el.dateText.addEventListener("input", () => { state.settings.date = el.dateText.value; scheduleRender(); });
+    // 日期：只用日曆選擇，值統一輸出為 YYYY/MM/DD；留空則不顯示日期
     el.datePicker.addEventListener("change", () => {
       if (el.datePicker.value) {
         const [yy, mm, dd] = el.datePicker.value.split("-");
         state.settings.date = `${yy}/${mm}/${dd}`;
       } else {
-        state.settings.date = ""; // 清空日期選擇器時一併清空文字與狀態，避免不同步
+        state.settings.date = "";
       }
-      el.dateText.value = state.settings.date;
       scheduleRender();
     });
 

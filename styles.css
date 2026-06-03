@@ -98,8 +98,6 @@ body {
 .field:last-child { margin-bottom: 0; }
 .field > label:not(.switch) { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-soft); margin-bottom: 6px; }
 .field__hint { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.5; }
-.field__row { display: flex; gap: 8px; }
-.field__row > input[type="text"] { flex: 1; }
 .field--grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field--grid2 > div { margin: 0; }
 .field--grid2 label { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-soft); margin-bottom: 6px; }
@@ -122,7 +120,6 @@ input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
-.date-picker { width: 44px; flex: none; padding: 0 6px; }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 
 /* Segmented control */
@@ -440,6 +437,4 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   .actionbar__status { display: none; }
   .btn--primary { flex: 1; }
   .field--grid2 { grid-template-columns: 1fr; }
-  .field__row { flex-direction: column; }
-  .date-picker { width: 100%; }
 }
