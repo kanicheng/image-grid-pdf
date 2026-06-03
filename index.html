@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>圖片整理排版工具 · 一鍵產出 A4 PDF</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%232f6df0'/%3E%3Cg fill='none' stroke='white' stroke-width='2'%3E%3Crect x='4' y='4' width='6.5' height='6.5' rx='1'/%3E%3Crect x='13.5' y='4' width='6.5' height='6.5' rx='1'/%3E%3Crect x='4' y='13.5' width='6.5' height='6.5' rx='1'/%3E%3Crect x='13.5' y='13.5' width='6.5' height='6.5' rx='1'/%3E%3C/g%3E%3C/svg%3E" />
+  <meta name="description" content="純前端圖片整理排版工具：一次上傳多張圖片，自動裁切成統一大小、整齊排列，加上標題與日期，產出單一 A4 PDF 檔案。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        </svg>
+      </div>
+      <div>
+        <h1 class="app-header__title">圖片整理排版工具</h1>
+        <p class="app-header__subtitle">一次上傳多張圖片 → 統一大小、整齊排列 → 產出單一 A4 PDF</p>
+      </div>
+    </div>
+    <a class="app-header__gh" href="https://github.com/kanicheng/image-grid-pdf" target="_blank" rel="noopener" aria-label="GitHub 原始碼">
+      <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+    </a>
+  </header>
+
+  <main class="layout">
+    <!-- ============ 控制面板 ============ -->
+    <aside class="controls" id="controls">
+      <!-- 標題與日期 -->
+      <section class="panel">
+        <h2 class="panel__title">標題與日期</h2>
+        <div class="field">
+          <label for="title">標題（左上）</label>
+          <input type="text" id="title" placeholder="例如：工程現場照片" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="subtitle">副標題（左上，選填）</label>
+          <input type="text" id="subtitle" placeholder="選填，顯示在標題下方" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="dateText">日期（右下）</label>
+          <div class="field__row">
+            <input type="text" id="dateText" placeholder="例如：2026/06/03" autocomplete="off" />
+            <input type="date" id="datePicker" class="date-picker" aria-label="選擇日期" />
+          </div>
+          <p class="field__hint">可手動輸入任意文字，或點右側日曆選日期自動帶入。</p>
+        </div>
+      </section>
+
+      <!-- 版面設定 -->
+      <section class="panel">
+        <h2 class="panel__title">版面設定</h2>
+
+        <div class="field">
+          <label>紙張方向</label>
+          <div class="segmented" role="radiogroup" aria-label="紙張方向">
+            <button type="button" class="segmented__btn is-active" data-setting="orientation" data-value="portrait">直式</button>
+            <button type="button" class="segmented__btn" data-setting="orientation" data-value="landscape">橫式</button>
+          </div>
+        </div>
+
+        <div class="field field--grid2">
+          <div>
+            <label for="cols">每列張數（欄）</label>
+            <input type="number" id="cols" min="1" max="6" step="1" value="2" />
+          </div>
+          <div>
+            <label for="rows">每頁列數（列）</label>
+            <input type="number" id="rows" min="1" max="8" step="1" value="3" />
+          </div>
+        </div>
+        <p class="field__hint" id="perPageHint">每頁 6 張，超過會自動分頁。</p>
+
+        <div class="field">
+          <label>圖片填滿方式</label>
+          <div class="segmented" role="radiogroup" aria-label="圖片填滿方式">
+            <button type="button" class="segmented__btn is-active" data-setting="fit" data-value="cover">裁切填滿</button>
+            <button type="button" class="segmented__btn" data-setting="fit" data-value="contain">完整顯示</button>
+          </div>
+          <p class="field__hint">裁切填滿＝每格大小一致（會裁掉邊緣）；完整顯示＝保留整張圖（可能留白）。</p>
+        </div>
+
+        <div class="field">
+          <label class="switch">
+            <input type="checkbox" id="showCaptions" />
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+            <span>在每張圖下方顯示標籤</span>
+          </label>
+        </div>
+        <div class="field field--captionType is-hidden" id="captionTypeField">
+          <label>標籤內容</label>
+          <div class="segmented" role="radiogroup" aria-label="標籤內容">
+            <button type="button" class="segmented__btn is-active" data-setting="captionType" data-value="filename">檔名</button>
+            <button type="button" class="segmented__btn" data-setting="captionType" data-value="number">編號</button>
+          </div>
+        </div>
+
+        <details class="advanced">
+          <summary>進階設定</summary>
+          <div class="field field--grid2">
+            <div>
+              <label for="margin">頁面邊界 (mm)</label>
+              <input type="number" id="margin" min="0" max="40" step="1" value="12" />
+            </div>
+            <div>
+              <label for="gap">圖片間距 (mm)</label>
+              <input type="number" id="gap" min="0" max="30" step="1" value="6" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="quality">輸出畫質 <span id="qualityLabel" class="muted">標準</span></label>
+            <input type="range" id="quality" min="96" max="300" step="6" value="150" />
+            <p class="field__hint">數值越高越清晰、檔案越大（DPI）。</p>
+          </div>
+          <div class="field">
+            <label class="switch">
+              <input type="checkbox" id="cellBorder" />
+              <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+              <span>圖片外加細框線</span>
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <!-- 上傳圖片 -->
+      <section class="panel">
+        <div class="panel__head">
+          <h2 class="panel__title">圖片（<span id="imgCount">0</span>）</h2>
+          <button type="button" class="btn btn--ghost btn--sm" id="clearAll" disabled>全部清除</button>
+        </div>
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="點擊、按 Enter 或空白鍵，或拖曳上傳圖片">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <p class="dropzone__main">點擊選擇，或將圖片拖曳到這裡</p>
+          <p class="dropzone__sub">支援一次選取數十張 · JPG / PNG / WebP / HEIC*</p>
+          <input type="file" id="fileInput" accept="image/*" multiple hidden />
+        </div>
+        <p class="field__hint">提示：可拖曳下方縮圖調整順序，順序即為 PDF 排列順序。</p>
+        <ul class="thumbs" id="thumbs" aria-label="已上傳圖片清單"></ul>
+      </section>
+    </aside>
+
+    <!-- ============ 預覽 ============ -->
+    <section class="preview-wrap">
+      <div class="preview-toolbar">
+        <div class="preview-toolbar__info">
+          <span id="pageCount" class="pill">0 頁</span>
+          <span class="muted" id="sheetInfo">A4 直式</span>
+        </div>
+        <div class="preview-toolbar__zoom">
+          <button type="button" class="btn btn--icon" id="zoomOut" aria-label="縮小預覽">−</button>
+          <span id="zoomLabel" class="muted">100%</span>
+          <button type="button" class="btn btn--icon" id="zoomIn" aria-label="放大預覽">+</button>
+        </div>
+      </div>
+      <div class="preview-scroll" id="previewScroll">
+        <div class="preview-empty" id="previewEmpty">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+            <line x1="8" y1="7" x2="16" y2="7"></line>
+            <rect x="8" y="11" width="8" height="6" rx="1"></rect>
+          </svg>
+          <p>上傳圖片後，這裡會即時顯示排版預覽</p>
+        </div>
+        <div class="pages" id="pages"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 產出列 ============ -->
+  <div class="actionbar">
+    <div class="actionbar__status" id="status"></div>
+    <button type="button" class="btn btn--primary btn--lg" id="generate" disabled>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+      </svg>
+      <span id="generateLabel">產出 PDF</span>
+    </button>
+  </div>
+
+  <!-- 進度遮罩 -->
+  <div class="overlay is-hidden" id="overlay" role="status" aria-live="polite">
+    <div class="overlay__card">
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="overlay__text" id="overlayText">處理中…</p>
+      <div class="progress"><div class="progress__bar" id="progressBar"></div></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
