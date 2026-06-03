@@ -47,6 +47,11 @@
     return `${t.getFullYear()}/${String(t.getMonth() + 1).padStart(2, "0")}/${String(t.getDate()).padStart(2, "0")}`;
   }
 
+  // 預設預覽縮放：手機（窄螢幕）用 60% 讓 A4 完整可見，桌機用 100%
+  function defaultZoom() {
+    return window.matchMedia("(max-width: 860px)").matches ? 0.6 : 1;
+  }
+
   // ---- 狀態 ----
   const state = {
     images: [],            // { id, name, file, url }
@@ -667,7 +672,8 @@
         for (const k of Object.keys(state.settings)) {
           if (!NON_PERSISTED.includes(k)) persistable[k] = state.settings[k];
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings: persistable, zoom: state.zoom }));
+        // 縮放不持久化：改為依裝置決定（手機 60% / 桌機 100%），避免跨裝置互相干擾
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ settings: persistable }));
       } catch (e) {
         console.warn("無法儲存設定（localStorage 不可用）：", e);
       }
@@ -688,9 +694,6 @@
             state.settings[k] = v;
           }
         }
-      }
-      if (typeof data.zoom === "number" && isFinite(data.zoom)) {
-        state.zoom = Math.max(0.5, Math.min(1.5, data.zoom));
       }
     } catch (e) {
       console.warn("無法讀取已儲存的設定：", e);
@@ -731,7 +734,7 @@
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
     state.settings = defaultSettings();
     state.settings.date = todayStr();
-    state.zoom = 1;
+    state.zoom = defaultZoom();
     syncControlsFromState();
     render();
     setStatus("已重設為預設值。", "ok");
@@ -741,6 +744,7 @@
     // 預設日期 = 今天（日期不持久化），再還原其他已儲存設定
     state.settings.date = todayStr();
     loadSettings();
+    state.zoom = defaultZoom(); // 手機 60% / 桌機 100%
 
     // 文字欄位
     el.title.addEventListener("input", () => { state.settings.title = el.title.value; scheduleRender(); });
