@@ -16,7 +16,7 @@
   const SUB_MM = 4.5;
   const DATE_MM = 4.8;
   const CAPTION_MM = 3.2;
-  const TITLE_GAP_MM = 5;   // 標題區與圖片格之間
+  const TITLE_GAP_MM = 5;   // 標題區與圖片格之間（預設值，可由使用者調整）
   const DATE_GAP_MM = 4;    // 圖片格與日期之間
   const CAPTION_GAP_MM = 1; // 圖片與其標籤之間
 
@@ -37,6 +37,7 @@
       captionType: "filename", // filename | number
       margin: 12,
       gap: 6,
+      titleGap: TITLE_GAP_MM, // 標題與圖片之間的留白（mm）
       dpi: 150,
       cellBorder: false,
     },
@@ -54,7 +55,7 @@
     cols: $("cols"), rows: $("rows"),
     perPageHint: $("perPageHint"),
     showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"),
-    margin: $("margin"), gap: $("gap"),
+    margin: $("margin"), gap: $("gap"), titleGap: $("titleGap"),
     quality: $("quality"), qualityLabel: $("qualityLabel"),
     cellBorder: $("cellBorder"),
     dropzone: $("dropzone"), fileInput: $("fileInput"),
@@ -104,7 +105,7 @@
     const titleHmm = title ? titleFit * 1.3 : 0;
     const subHmm = subtitle ? subFit * 1.4 : 0;
     const headHmm = titleHmm + subHmm;
-    const titleBlockH = headHmm > 0 ? headHmm + TITLE_GAP_MM : 0;
+    const titleBlockH = headHmm > 0 ? headHmm + s.titleGap : 0;
 
     const dateHmm = date ? dateFit * 1.3 : 0;
     const dateBlockH = dateHmm > 0 ? dateHmm + DATE_GAP_MM : 0;
@@ -678,6 +679,7 @@
     el.rows.addEventListener("input", () => { state.settings.rows = clampNum(el.rows, 1, 8); render(); });
     el.margin.addEventListener("input", () => { state.settings.margin = clampNum(el.margin, 0, 40); render(); });
     el.gap.addEventListener("input", () => { state.settings.gap = clampNum(el.gap, 0, 30); render(); });
+    el.titleGap.addEventListener("input", () => { state.settings.titleGap = clampNum(el.titleGap, 0, 60); render(); });
     el.quality.addEventListener("input", () => {
       state.settings.dpi = parseInt(el.quality.value, 10);
       el.qualityLabel.textContent = qualityWord(state.settings.dpi);
