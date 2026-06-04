@@ -67,9 +67,16 @@
         </div>
         <p class="field__hint">副標題會隨標題大小等比縮放；「標題與圖片間距」為標題與下方圖片的留白。</p>
         <div class="field">
-          <label for="datePicker">日期（右下）</label>
+          <label class="switch">
+            <input type="checkbox" id="showDate" checked />
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+            <span>顯示日期（右下）</span>
+          </label>
+        </div>
+        <div class="field">
+          <label for="datePicker">日期</label>
           <input type="date" id="datePicker" aria-label="選擇日期" />
-          <p class="field__hint">點選日曆選擇日期；留空則 PDF 不顯示日期。</p>
+          <p class="field__hint">點選日曆選擇日期；關閉上方開關則 PDF 不顯示日期。</p>
         </div>
         <div class="field">
           <label for="dateSize">日期文字大小 (mm)</label>
@@ -161,6 +168,46 @@
         </details>
       </section>
 
+      <!-- 照片描述與浮水印 -->
+      <section class="panel">
+        <h2 class="panel__title">照片描述與浮水印</h2>
+        <div class="field">
+          <label class="switch">
+            <input type="checkbox" id="showDesc" />
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+            <span>在每張照片下方顯示描述</span>
+          </label>
+        </div>
+        <div class="field is-hidden" id="descSizeField">
+          <label for="descSize">描述文字大小 (mm)</label>
+          <input type="number" id="descSize" min="2" max="12" step="0.5" value="3.5" />
+        </div>
+
+        <div class="field">
+          <label class="switch">
+            <input type="checkbox" id="showWatermark" />
+            <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+            <span>在每張照片右下角打日期浮水印</span>
+          </label>
+        </div>
+        <div class="is-hidden" id="watermarkOpts">
+          <div class="field">
+            <label>浮水印顏色</label>
+            <div class="segmented" role="radiogroup" aria-label="浮水印顏色">
+              <button type="button" class="segmented__btn is-active" data-setting="watermarkColor" data-value="red"><span class="wm-dot" style="background:#e11d1d"></span>紅</button>
+              <button type="button" class="segmented__btn" data-setting="watermarkColor" data-value="black"><span class="wm-dot" style="background:#111111"></span>黑</button>
+              <button type="button" class="segmented__btn" data-setting="watermarkColor" data-value="blue"><span class="wm-dot" style="background:#1f5bd6"></span>藍</button>
+              <button type="button" class="segmented__btn" data-setting="watermarkColor" data-value="yellow"><span class="wm-dot" style="background:#e6a700"></span>黃</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="watermarkSize">浮水印文字大小 (mm)</label>
+            <input type="number" id="watermarkSize" min="2" max="16" step="0.5" value="4" />
+          </div>
+        </div>
+        <p class="field__hint">描述內容與每張照片的浮水印日期，請用下方照片區的「逐張編輯」按鈕填寫。</p>
+      </section>
+
       <!-- 上傳圖片 -->
       <section class="panel">
         <div class="panel__head">
@@ -178,6 +225,7 @@
           <input type="file" id="fileInput" accept="image/*" multiple hidden />
         </div>
         <p class="field__hint">提示：可拖曳下方縮圖調整順序，順序即為 PDF 排列順序。</p>
+        <button type="button" class="btn btn--ghost btn--block" id="openEditor">✎ 逐張編輯（描述／浮水印日期）</button>
         <ul class="thumbs" id="thumbs" aria-label="已上傳圖片清單"></ul>
       </section>
     </aside>
@@ -227,6 +275,25 @@
       <div class="spinner" aria-hidden="true"></div>
       <p class="overlay__text" id="overlayText">處理中…</p>
       <div class="progress"><div class="progress__bar" id="progressBar"></div></div>
+    </div>
+  </div>
+
+  <!-- 逐張編輯視窗 -->
+  <div class="editor is-hidden" id="editorOverlay" role="dialog" aria-modal="true" aria-label="逐張編輯描述與浮水印日期">
+    <div class="editor__panel">
+      <header class="editor__head">
+        <h2 class="editor__title">逐張編輯（描述／浮水印日期）</h2>
+        <button type="button" class="btn btn--icon editor__close" id="editorClose" aria-label="關閉">×</button>
+      </header>
+      <div class="editor__toolbar">
+        <span class="editor__bulklabel">一鍵套用日期到全部：</span>
+        <input type="date" id="bulkDate" aria-label="一鍵套用的日期" />
+        <button type="button" class="btn btn--ghost btn--sm" id="bulkApply">套用到全部</button>
+      </div>
+      <div class="editor__list" id="editorList"></div>
+      <footer class="editor__foot">
+        <button type="button" class="btn btn--primary" id="editorDone">完成</button>
+      </footer>
     </div>
   </div>
 

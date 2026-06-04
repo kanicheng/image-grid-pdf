@@ -19,7 +19,11 @@
   const CAPTION_MM = 3.2;
   const TITLE_GAP_MM = 5;   // 標題區與圖片格之間（預設值，可由使用者調整）
   const DATE_GAP_MM = 4;    // 圖片格與日期之間
-  const CAPTION_GAP_MM = 1; // 圖片與其標籤之間
+  const CAPTION_GAP_MM = 1; // 圖片與其標籤/描述之間
+  const DESC_MM = 3.5;      // 照片描述字級預設值（mm）
+  const WM_MM = 4;          // 日期浮水印字級預設值（mm）
+  // 浮水印可選顏色
+  const WM_COLORS = { red: "#e11d1d", black: "#111111", blue: "#1f5bd6", yellow: "#e6a700" };
 
   const PREVIEW_PAGE_CAP = 24; // 預覽最多顯示頁數（PDF 不受限）
   const STORAGE_KEY = "image-grid-pdf:v1"; // localStorage 鍵，用於設定持久化
@@ -29,6 +33,7 @@
       title: "",
       subtitle: "",
       date: "",
+      showDate: true,       // 是否顯示右下日期
       orientation: "portrait",
       cols: 2,
       rows: 3,
@@ -39,6 +44,11 @@
       showCaptions: false,
       captionType: "filename", // filename | number
       captionSize: CAPTION_MM, // 標籤（檔名/編號）字級（mm）
+      showDesc: false,      // 是否在每張照片下方顯示自訂描述
+      descSize: DESC_MM,    // 描述字級（mm）
+      showWatermark: false, // 是否在每張照片右下角打上日期浮水印
+      watermarkColor: "red",// red | black | blue | yellow
+      watermarkSize: WM_MM, // 浮水印字級（mm）
       margin: 12,
       gap: 6,
       titleGap: TITLE_GAP_MM, // 標題與圖片之間的留白（mm）
@@ -74,13 +84,18 @@
     datePicker: $("datePicker"),
     cols: $("cols"), rows: $("rows"),
     perPageHint: $("perPageHint"),
+    showDate: $("showDate"),
     showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"), captionSize: $("captionSize"),
+    showDesc: $("showDesc"), descSizeField: $("descSizeField"), descSize: $("descSize"),
+    showWatermark: $("showWatermark"), watermarkOpts: $("watermarkOpts"), watermarkSize: $("watermarkSize"),
     margin: $("margin"), gap: $("gap"), titleGap: $("titleGap"),
     titleSize: $("titleSize"), dateSize: $("dateSize"),
     quality: $("quality"), qualityLabel: $("qualityLabel"),
     cellBorder: $("cellBorder"), resetBtn: $("resetSettings"),
     dropzone: $("dropzone"), fileInput: $("fileInput"),
     thumbs: $("thumbs"), imgCount: $("imgCount"), clearAll: $("clearAll"),
+    openEditor: $("openEditor"), editorOverlay: $("editorOverlay"), editorList: $("editorList"),
+    editorClose: $("editorClose"), editorDone: $("editorDone"), bulkDate: $("bulkDate"), bulkApply: $("bulkApply"),
     pages: $("pages"), previewEmpty: $("previewEmpty"), previewScroll: $("previewScroll"),
     pageCount: $("pageCount"), sheetInfo: $("sheetInfo"),
     zoomIn: $("zoomIn"), zoomOut: $("zoomOut"), zoomLabel: $("zoomLabel"),
@@ -117,7 +132,7 @@
 
     const title = s.title.trim();
     const subtitle = s.subtitle.trim();
-    const date = s.date.trim();
+    const date = s.showDate ? s.date.trim() : ""; // 日期由開關控制
 
     const titleFit = fitFontMm(title, s.titleSize, innerW, 900);
     const subFit = fitFontMm(subtitle, s.titleSize * SUB_RATIO, innerW, 700);
@@ -141,8 +156,11 @@
     const cellW = Math.max(0, (gridW - (cols - 1) * s.gap) / cols);
     const cellH = Math.max(0, (gridH - (rows - 1) * s.gap) / rows);
 
+    // 圖片下方文字：描述（自訂）與標籤（檔名/編號）各自可開關，依序佔用高度
+    const descH = s.showDesc ? s.descSize * 1.3 : 0;
     const captionH = s.showCaptions ? s.captionSize * 1.3 : 0;
-    const imgH = cellH - (s.showCaptions ? captionH + CAPTION_GAP_MM : 0);
+    const belowH = (descH ? descH + CAPTION_GAP_MM : 0) + (captionH ? captionH + CAPTION_GAP_MM : 0);
+    const imgH = cellH - belowH;
 
     return {
       page, m, innerW,
@@ -151,7 +169,7 @@
       titleHmm, subHmm, dateHmm, titleBlockH, dateBlockH,
       gridX, gridY, gridW, gridH,
       cols, rows, perPage: cols * rows,
-      cellW, cellH, imgH, captionH,
+      cellW, cellH, imgH, captionH, descH,
       valid: cellW > 1 && imgH > 1,
     };
   }
@@ -274,8 +292,31 @@
       imgBox.className = "cell__img";
       const im = getPoolImg(img);
       imgBox.appendChild(im);
+
+      // 日期浮水印（疊在圖片右下角，顏色與字級可調）
+      if (s.showWatermark && img.wmDate) {
+        const wm = document.createElement("div");
+        wm.className = "cell__wm";
+        wm.textContent = img.wmDate;
+        wm.style.fontSize = mm(s.watermarkSize);
+        wm.style.color = WM_COLORS[s.watermarkColor] || WM_COLORS.red;
+        wm.style.right = mm(1.5);
+        wm.style.bottom = mm(1.5);
+        imgBox.appendChild(wm);
+      }
       cell.appendChild(imgBox);
 
+      // 描述（自訂，圖片下方）
+      if (s.showDesc) {
+        const d = document.createElement("div");
+        d.className = "cell__desc";
+        d.style.fontSize = mm(s.descSize);
+        d.style.height = mm(L.descH);
+        d.style.lineHeight = mm(L.descH);
+        d.textContent = img.desc || "";
+        cell.appendChild(d);
+      }
+      // 標籤（檔名/編號，圖片下方）
       if (s.showCaptions) {
         const cap = document.createElement("div");
         cap.className = "cell__caption";
@@ -359,6 +400,7 @@
     state.images.splice(idx, 1);
     renderThumbs();
     render();
+    refreshEditorIfOpen();
   }
 
   function clearAll() {
@@ -368,6 +410,96 @@
     imgPool.clear();
     renderThumbs();
     render();
+    refreshEditorIfOpen();
+  }
+
+  /* ===================== 逐張編輯（描述 / 日期浮水印）視窗 ===================== */
+  function ymd2slash(v) { // YYYY-MM-DD -> YYYY/MM/DD
+    if (!v) return "";
+    const [y, m, d] = v.split("-");
+    return y && m && d ? `${y}/${m}/${d}` : "";
+  }
+  function slash2ymd(v) { // YYYY/MM/DD -> YYYY-MM-DD（給 <input type=date>）
+    return /^\d{4}\/\d{2}\/\d{2}$/.test(v || "") ? v.replace(/\//g, "-") : "";
+  }
+
+  function buildEditorList() {
+    el.editorList.innerHTML = "";
+    if (state.images.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "editor__empty";
+      empty.textContent = "尚未上傳任何照片。";
+      el.editorList.appendChild(empty);
+      return;
+    }
+    state.images.forEach((img, i) => {
+      const row = document.createElement("div");
+      row.className = "erow";
+
+      const idx = document.createElement("span");
+      idx.className = "erow__idx";
+      idx.textContent = String(i + 1);
+      row.appendChild(idx);
+
+      const thumb = document.createElement("img");
+      thumb.className = "erow__thumb";
+      thumb.src = img.url; thumb.alt = img.name;
+      thumb.onerror = () => thumb.classList.add("is-broken");
+      row.appendChild(thumb);
+
+      const fields = document.createElement("div");
+      fields.className = "erow__fields";
+
+      const descWrap = document.createElement("label");
+      descWrap.className = "erow__field";
+      descWrap.innerHTML = '<span class="erow__lbl">描述</span>';
+      const descIn = document.createElement("input");
+      descIn.type = "text"; descIn.value = img.desc || ""; descIn.placeholder = "輸入此張照片的描述";
+      descIn.addEventListener("input", () => { img.desc = descIn.value; scheduleRender(); });
+      descWrap.appendChild(descIn);
+      fields.appendChild(descWrap);
+
+      const dateWrap = document.createElement("label");
+      dateWrap.className = "erow__field erow__field--date";
+      dateWrap.innerHTML = '<span class="erow__lbl">浮水印日期</span>';
+      const dateIn = document.createElement("input");
+      dateIn.type = "date"; dateIn.value = slash2ymd(img.wmDate);
+      dateIn.addEventListener("change", () => { img.wmDate = ymd2slash(dateIn.value); scheduleRender(); });
+      dateIn.addEventListener("click", () => { try { dateIn.showPicker && dateIn.showPicker(); } catch (e) {} });
+      dateWrap.appendChild(dateIn);
+      fields.appendChild(dateWrap);
+
+      row.appendChild(fields);
+
+      const del = document.createElement("button");
+      del.type = "button"; del.className = "erow__del"; del.textContent = "×"; del.title = "移除此張";
+      del.addEventListener("click", () => removeImage(img.id));
+      row.appendChild(del);
+
+      el.editorList.appendChild(row);
+    });
+  }
+
+  function refreshEditorIfOpen() {
+    if (el.editorOverlay && !el.editorOverlay.classList.contains("is-hidden")) buildEditorList();
+  }
+
+  function openEditor() {
+    buildEditorList();
+    el.editorOverlay.classList.remove("is-hidden");
+    document.body.style.overflow = "hidden";
+  }
+  function closeEditor() {
+    el.editorOverlay.classList.add("is-hidden");
+    document.body.style.overflow = "";
+  }
+  function applyBulkDate() {
+    const v = ymd2slash(el.bulkDate.value);
+    if (!v) { setStatus("請先在「一鍵套用」選一個日期。", "error"); return; }
+    state.images.forEach((img) => { img.wmDate = v; });
+    buildEditorList();
+    render();
+    setStatus(`已把 ${v} 套用到全部 ${state.images.length} 張照片的浮水印日期。`, "ok");
   }
 
   // 指標式拖曳排序（滑鼠 + 觸控通用）
@@ -414,10 +546,11 @@
       return;
     }
     for (const f of files) {
-      state.images.push({ id: nextId++, name: f.name, file: f, url: URL.createObjectURL(f) });
+      state.images.push({ id: nextId++, name: f.name, file: f, url: URL.createObjectURL(f), desc: "", wmDate: "" });
     }
     renderThumbs();
     render();
+    refreshEditorIfOpen();
     setStatus(`已加入 ${files.length} 張，共 ${state.images.length} 張。`, "ok");
   }
 
@@ -488,12 +621,35 @@
             doc.rect(cellX, cellY, L.cellW, L.imgH, "FD");
           }
 
+          // 日期浮水印（疊在圖片右下角）
+          if (s.showWatermark && img.wmDate) {
+            const wm = renderWatermark(img.wmDate, s.watermarkSize, WM_COLORS[s.watermarkColor] || WM_COLORS.red);
+            const pad = 1.5;
+            const wx = Math.max(cellX, cellX + L.cellW - wm.wMm - pad);
+            const wy = Math.max(cellY, cellY + L.imgH - wm.hMm - pad);
+            doc.addImage(wm.dataUrl, "PNG", wx, wy, wm.wMm, wm.hMm);
+          }
+
+          // 圖片下方文字：描述 → 標籤（順序需與 computeLayout 的 belowH 一致）
+          let belowY = cellY + L.imgH;
+          if (s.showDesc) {
+            belowY += CAPTION_GAP_MM;
+            const txt = (img.desc || "").trim();
+            if (txt) {
+              const fit = fitFontMm(txt, s.descSize, L.cellW, 400);
+              const d = renderTextImage(txt, fit, 400, "#222222");
+              const dW = Math.min(d.wMm, L.cellW);
+              doc.addImage(d.dataUrl, "PNG", cellX + (L.cellW - dW) / 2, belowY, dW, d.hMm);
+            }
+            belowY += L.descH;
+          }
           if (s.showCaptions) {
-            const cap = renderTextImage(captionFor(img, idx), s.captionSize, 400, "#444444");
+            belowY += CAPTION_GAP_MM;
+            const cfit = fitFontMm(captionFor(img, idx), s.captionSize, L.cellW, 400);
+            const cap = renderTextImage(captionFor(img, idx), cfit, 400, "#444444");
             const capW = Math.min(cap.wMm, L.cellW);
-            const capX = cellX + (L.cellW - capW) / 2;
-            const capY = cellY + L.imgH + CAPTION_GAP_MM;
-            doc.addImage(cap.dataUrl, "PNG", capX, capY, capW, cap.hMm);
+            doc.addImage(cap.dataUrl, "PNG", cellX + (L.cellW - capW) / 2, belowY, capW, cap.hMm);
+            belowY += L.captionH;
           }
         }
       }
@@ -608,6 +764,29 @@
     cx.textAlign = "left";
     cx.fillText(text, fontPx * 0.06, h / 2);
     return { dataUrl: c.toDataURL("image/png"), wMm: w / pxPerMm, hMm: h / pxPerMm };
+  }
+
+  // 浮水印：彩色文字 + 半透明深色陰影（任何底色都看得清楚），回傳 dataUrl 與 mm 尺寸
+  function renderWatermark(text, fontMm, colorHex) {
+    const dpi = 300;
+    const pxPerMm = dpi / 25.4;
+    const fontPx = fontMm * pxPerMm;
+    measCtx.font = `700 ${fontPx}px ${FONT_STACK}`;
+    const tw = Math.ceil(measCtx.measureText(text).width);
+    const off = Math.max(1, Math.round(fontPx * 0.06)); // 陰影位移
+    const w = tw + off * 3;
+    const h = Math.ceil(fontPx * 1.3) + off * 2;
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, w); c.height = h;
+    const cx = c.getContext("2d");
+    cx.font = `700 ${fontPx}px ${FONT_STACK}`;
+    cx.textBaseline = "middle";
+    cx.textAlign = "left";
+    cx.fillStyle = "rgba(0,0,0,0.55)";
+    cx.fillText(text, off + off, h / 2 + off);
+    cx.fillStyle = colorHex;
+    cx.fillText(text, off, h / 2);
+    return { dataUrl: c.toDataURL("image/png"), wMm: c.width / pxPerMm, hMm: c.height / pxPerMm };
   }
 
   function buildFileName(L) {
@@ -738,14 +917,22 @@
     el.dateSize.value = s.dateSize;
     el.quality.value = s.dpi;
     el.qualityLabel.textContent = qualityWord(s.dpi);
+    el.showDate.checked = s.showDate;
     el.showCaptions.checked = s.showCaptions;
     el.captionTypeField.classList.toggle("is-hidden", !s.showCaptions);
     el.captionSize.value = s.captionSize;
+    el.showDesc.checked = s.showDesc;
+    el.descSizeField.classList.toggle("is-hidden", !s.showDesc);
+    el.descSize.value = s.descSize;
+    el.showWatermark.checked = s.showWatermark;
+    el.watermarkOpts.classList.toggle("is-hidden", !s.showWatermark);
+    el.watermarkSize.value = s.watermarkSize;
     el.cellBorder.checked = s.cellBorder;
     syncSegment("orientation", s.orientation);
     syncSegment("fit", s.fit);
     syncSegment("titleAlign", s.titleAlign);
     syncSegment("captionType", s.captionType);
+    syncSegment("watermarkColor", s.watermarkColor);
   }
 
   function resetSettings() {
@@ -812,18 +999,39 @@
     bindSize(el.titleSize, "titleSize", 4, 24);
     bindSize(el.dateSize, "dateSize", 3, 16);
     bindSize(el.captionSize, "captionSize", 2, 10);
+    bindSize(el.descSize, "descSize", 2, 12);
+    bindSize(el.watermarkSize, "watermarkSize", 2, 16);
     el.quality.addEventListener("input", () => {
       state.settings.dpi = parseInt(el.quality.value, 10);
       el.qualityLabel.textContent = qualityWord(state.settings.dpi);
     });
 
     // 開關
+    el.showDate.addEventListener("change", () => { state.settings.showDate = el.showDate.checked; render(); });
     el.showCaptions.addEventListener("change", () => {
       state.settings.showCaptions = el.showCaptions.checked;
       el.captionTypeField.classList.toggle("is-hidden", !el.showCaptions.checked);
       render();
     });
+    el.showDesc.addEventListener("change", () => {
+      state.settings.showDesc = el.showDesc.checked;
+      el.descSizeField.classList.toggle("is-hidden", !el.showDesc.checked);
+      render();
+    });
+    el.showWatermark.addEventListener("change", () => {
+      state.settings.showWatermark = el.showWatermark.checked;
+      el.watermarkOpts.classList.toggle("is-hidden", !el.showWatermark.checked);
+      render();
+    });
     el.cellBorder.addEventListener("change", () => { state.settings.cellBorder = el.cellBorder.checked; render(); });
+
+    // 逐張編輯視窗
+    el.openEditor.addEventListener("click", openEditor);
+    el.editorClose.addEventListener("click", closeEditor);
+    el.editorDone.addEventListener("click", closeEditor);
+    el.bulkApply.addEventListener("click", applyBulkDate);
+    el.editorOverlay.addEventListener("click", (e) => { if (e.target === el.editorOverlay) closeEditor(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !el.editorOverlay.classList.contains("is-hidden")) closeEditor(); });
 
     // 分段控制
     document.querySelectorAll(".segmented").forEach(bindSegmented);
