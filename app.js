@@ -49,6 +49,8 @@
       showWatermark: false, // 是否在每張照片右下角打上日期浮水印
       watermarkColor: "red",// red | black | blue | yellow
       watermarkSize: WM_MM, // 浮水印字級（mm）
+      watermarkHalo: true,  // 浮水印文字光暈（提升複雜底色可讀性）
+      watermarkHaloStrength: 5, // 光暈強度 1–10
       margin: 12,
       gap: 6,
       titleGap: TITLE_GAP_MM, // 標題與圖片之間的留白（mm）
@@ -88,6 +90,7 @@
     showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"), captionSize: $("captionSize"),
     showDesc: $("showDesc"), descSizeField: $("descSizeField"), descSize: $("descSize"),
     showWatermark: $("showWatermark"), watermarkOpts: $("watermarkOpts"), watermarkSize: $("watermarkSize"),
+    wmHaloOn: $("wmHaloOn"), wmHaloStrength: $("wmHaloStrength"), wmHaloStrengthField: $("wmHaloStrengthField"), wmHaloStrengthLabel: $("wmHaloStrengthLabel"),
     margin: $("margin"), gap: $("gap"), titleGap: $("titleGap"),
     titleSize: $("titleSize"), dateSize: $("dateSize"),
     quality: $("quality"), qualityLabel: $("qualityLabel"),
@@ -303,10 +306,14 @@
         wm.style.color = wmColor;
         wm.style.right = mm(1.5);
         wm.style.bottom = mm(1.5);
-        // 環繞光暈（描邊感）：黑字配白光暈、其他配深色光暈
-        const halo = wmHalo(wmColor);
-        const r = Math.max(1, s.watermarkSize * pp * 0.18);
-        wm.style.textShadow = `0 0 ${r}px ${halo}, 0 0 ${r}px ${halo}, 0 0 ${r * 2}px ${halo}, 0 ${Math.max(1, r * 0.4)}px ${r}px ${halo}`;
+        // 環繞光暈（可開關／調強度）：黑字配白光暈、其他配深色光暈
+        if (s.watermarkHalo) {
+          const halo = wmHaloColor(wmColor, s.watermarkHaloStrength);
+          const r = Math.max(1, s.watermarkSize * pp * 0.04 * s.watermarkHaloStrength);
+          wm.style.textShadow = `0 0 ${r}px ${halo}, 0 0 ${r}px ${halo}, 0 0 ${r * 2}px ${halo}, 0 ${Math.max(1, r * 0.4)}px ${r}px ${halo}`;
+        } else {
+          wm.style.textShadow = "none";
+        }
         imgBox.appendChild(wm);
       }
       cell.appendChild(imgBox);
@@ -628,7 +635,7 @@
 
           // 日期浮水印（疊在圖片右下角）
           if (s.showWatermark && img.wmDate) {
-            const wm = renderWatermark(img.wmDate, s.watermarkSize, WM_COLORS[s.watermarkColor] || WM_COLORS.red);
+            const wm = renderWatermark(img.wmDate, s.watermarkSize, WM_COLORS[s.watermarkColor] || WM_COLORS.red, s.watermarkHalo, s.watermarkHaloStrength);
             const pad = 1.5;
             const wx = Math.max(cellX, cellX + L.cellW - wm.wMm - pad);
             const wy = Math.max(cellY, cellY + L.imgH - wm.hMm - pad);
@@ -771,20 +778,22 @@
     return { dataUrl: c.toDataURL("image/png"), wMm: w / pxPerMm, hMm: h / pxPerMm };
   }
 
-  // 黑色浮水印配白色光暈、其他顏色配深色光暈，確保任何底色都清楚
-  function wmHalo(colorHex) {
-    return colorHex.toLowerCase() === WM_COLORS.black.toLowerCase() ? "rgba(255,255,255,0.95)" : "rgba(0,0,0,0.8)";
+  // 光暈顏色：黑字配白光暈、其他配深色光暈；透明度隨強度（1–10）增加
+  function wmHaloColor(colorHex, strength) {
+    const alpha = Math.min(0.97, 0.3 + strength * 0.1); // 1→0.4、5→0.8、7+→封頂
+    const black = colorHex.toLowerCase() === WM_COLORS.black.toLowerCase();
+    return black ? `rgba(255,255,255,${alpha})` : `rgba(0,0,0,${alpha})`;
   }
 
-  // 浮水印：彩色文字 + 環繞光暈（描邊感），回傳 dataUrl 與 mm 尺寸
-  function renderWatermark(text, fontMm, colorHex) {
+  // 浮水印：彩色文字 + 可開關／可調強度的環繞光暈，回傳 dataUrl 與 mm 尺寸
+  function renderWatermark(text, fontMm, colorHex, haloOn, strength) {
     const dpi = 300;
     const pxPerMm = dpi / 25.4;
     const fontPx = fontMm * pxPerMm;
     measCtx.font = `700 ${fontPx}px ${FONT_STACK}`;
     const tw = Math.ceil(measCtx.measureText(text).width);
-    const blur = Math.max(2, Math.round(fontPx * 0.2));   // 光暈模糊半徑
-    const pad = blur + Math.round(fontPx * 0.12);          // 預留光暈空間，避免被裁切
+    const blur = haloOn ? Math.max(2, Math.round(fontPx * 0.04 * strength)) : 0; // 強度越高越糊越大
+    const pad = blur + Math.round(fontPx * 0.12);
     const w = tw + pad * 2;
     const h = Math.ceil(fontPx * 1.3) + pad * 2;
     const c = document.createElement("canvas");
@@ -793,15 +802,15 @@
     cx.font = `700 ${fontPx}px ${FONT_STACK}`;
     cx.textBaseline = "middle";
     cx.textAlign = "left";
-    const halo = wmHalo(colorHex);
-    // 以光暈色 + 模糊陰影，疊數次形成環繞描邊
-    cx.shadowColor = halo;
-    cx.shadowBlur = blur;
-    cx.fillStyle = halo;
-    for (let k = 0; k < 4; k++) cx.fillText(text, pad, h / 2);
-    // 再畫一次純色（無陰影），文字邊緣清晰
-    cx.shadowColor = "transparent";
-    cx.shadowBlur = 0;
+    if (haloOn) {
+      const halo = wmHaloColor(colorHex, strength);
+      cx.shadowColor = halo;
+      cx.shadowBlur = blur;
+      cx.fillStyle = halo;
+      for (let k = 0; k < 4; k++) cx.fillText(text, pad, h / 2);
+      cx.shadowColor = "transparent";
+      cx.shadowBlur = 0;
+    }
     cx.fillStyle = colorHex;
     cx.fillText(text, pad, h / 2);
     return { dataUrl: c.toDataURL("image/png"), wMm: c.width / pxPerMm, hMm: c.height / pxPerMm };
@@ -830,6 +839,11 @@
     if (dpi <= 170) return "標準";
     if (dpi <= 230) return "高清";
     return "最高";
+  }
+  function haloWord(v) {
+    if (v <= 3) return "弱";
+    if (v <= 6) return "中";
+    return "強";
   }
 
   /* ===================== 設定綁定 ===================== */
@@ -945,6 +959,10 @@
     el.showWatermark.checked = s.showWatermark;
     el.watermarkOpts.classList.toggle("is-hidden", !s.showWatermark);
     el.watermarkSize.value = s.watermarkSize;
+    el.wmHaloOn.checked = s.watermarkHalo;
+    el.wmHaloStrengthField.classList.toggle("is-hidden", !s.watermarkHalo);
+    el.wmHaloStrength.value = s.watermarkHaloStrength;
+    el.wmHaloStrengthLabel.textContent = haloWord(s.watermarkHaloStrength);
     el.cellBorder.checked = s.cellBorder;
     syncSegment("orientation", s.orientation);
     syncSegment("fit", s.fit);
@@ -1039,6 +1057,16 @@
     el.showWatermark.addEventListener("change", () => {
       state.settings.showWatermark = el.showWatermark.checked;
       el.watermarkOpts.classList.toggle("is-hidden", !el.showWatermark.checked);
+      render();
+    });
+    el.wmHaloOn.addEventListener("change", () => {
+      state.settings.watermarkHalo = el.wmHaloOn.checked;
+      el.wmHaloStrengthField.classList.toggle("is-hidden", !el.wmHaloOn.checked);
+      render();
+    });
+    el.wmHaloStrength.addEventListener("input", () => {
+      state.settings.watermarkHaloStrength = parseInt(el.wmHaloStrength.value, 10);
+      el.wmHaloStrengthLabel.textContent = haloWord(state.settings.watermarkHaloStrength);
       render();
     });
     el.cellBorder.addEventListener("change", () => { state.settings.cellBorder = el.cellBorder.checked; render(); });
