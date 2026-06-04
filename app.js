@@ -38,6 +38,7 @@
       dateSize: DATE_MM,    // 日期字級（mm）
       showCaptions: false,
       captionType: "filename", // filename | number
+      captionSize: CAPTION_MM, // 標籤（檔名/編號）字級（mm）
       margin: 12,
       gap: 6,
       titleGap: TITLE_GAP_MM, // 標題與圖片之間的留白（mm）
@@ -73,7 +74,7 @@
     datePicker: $("datePicker"),
     cols: $("cols"), rows: $("rows"),
     perPageHint: $("perPageHint"),
-    showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"),
+    showCaptions: $("showCaptions"), captionTypeField: $("captionTypeField"), captionSize: $("captionSize"),
     margin: $("margin"), gap: $("gap"), titleGap: $("titleGap"),
     titleSize: $("titleSize"), dateSize: $("dateSize"),
     quality: $("quality"), qualityLabel: $("qualityLabel"),
@@ -140,7 +141,7 @@
     const cellW = Math.max(0, (gridW - (cols - 1) * s.gap) / cols);
     const cellH = Math.max(0, (gridH - (rows - 1) * s.gap) / rows);
 
-    const captionH = s.showCaptions ? CAPTION_MM * 1.3 : 0;
+    const captionH = s.showCaptions ? s.captionSize * 1.3 : 0;
     const imgH = cellH - (s.showCaptions ? captionH + CAPTION_GAP_MM : 0);
 
     return {
@@ -278,7 +279,7 @@
       if (s.showCaptions) {
         const cap = document.createElement("div");
         cap.className = "cell__caption";
-        cap.style.fontSize = mm(CAPTION_MM);
+        cap.style.fontSize = mm(s.captionSize);
         cap.style.height = mm(L.captionH);
         cap.style.lineHeight = mm(L.captionH);
         cap.textContent = captionFor(img, idx);
@@ -488,7 +489,7 @@
           }
 
           if (s.showCaptions) {
-            const cap = renderTextImage(captionFor(img, idx), CAPTION_MM, 400, "#444444");
+            const cap = renderTextImage(captionFor(img, idx), s.captionSize, 400, "#444444");
             const capW = Math.min(cap.wMm, L.cellW);
             const capX = cellX + (L.cellW - capW) / 2;
             const capY = cellY + L.imgH + CAPTION_GAP_MM;
@@ -739,6 +740,7 @@
     el.qualityLabel.textContent = qualityWord(s.dpi);
     el.showCaptions.checked = s.showCaptions;
     el.captionTypeField.classList.toggle("is-hidden", !s.showCaptions);
+    el.captionSize.value = s.captionSize;
     el.cellBorder.checked = s.cellBorder;
     syncSegment("orientation", s.orientation);
     syncSegment("fit", s.fit);
@@ -809,6 +811,7 @@
     };
     bindSize(el.titleSize, "titleSize", 4, 24);
     bindSize(el.dateSize, "dateSize", 3, 16);
+    bindSize(el.captionSize, "captionSize", 2, 10);
     el.quality.addEventListener("input", () => {
       state.settings.dpi = parseInt(el.quality.value, 10);
       el.qualityLabel.textContent = qualityWord(state.settings.dpi);
