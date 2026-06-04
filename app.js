@@ -298,10 +298,15 @@
         const wm = document.createElement("div");
         wm.className = "cell__wm";
         wm.textContent = img.wmDate;
+        const wmColor = WM_COLORS[s.watermarkColor] || WM_COLORS.red;
         wm.style.fontSize = mm(s.watermarkSize);
-        wm.style.color = WM_COLORS[s.watermarkColor] || WM_COLORS.red;
+        wm.style.color = wmColor;
         wm.style.right = mm(1.5);
         wm.style.bottom = mm(1.5);
+        // 環繞光暈（描邊感）：黑字配白光暈、其他配深色光暈
+        const halo = wmHalo(wmColor);
+        const r = Math.max(1, s.watermarkSize * pp * 0.18);
+        wm.style.textShadow = `0 0 ${r}px ${halo}, 0 0 ${r}px ${halo}, 0 0 ${r * 2}px ${halo}, 0 ${Math.max(1, r * 0.4)}px ${r}px ${halo}`;
         imgBox.appendChild(wm);
       }
       cell.appendChild(imgBox);
@@ -766,26 +771,39 @@
     return { dataUrl: c.toDataURL("image/png"), wMm: w / pxPerMm, hMm: h / pxPerMm };
   }
 
-  // 浮水印：彩色文字 + 半透明深色陰影（任何底色都看得清楚），回傳 dataUrl 與 mm 尺寸
+  // 黑色浮水印配白色光暈、其他顏色配深色光暈，確保任何底色都清楚
+  function wmHalo(colorHex) {
+    return colorHex.toLowerCase() === WM_COLORS.black.toLowerCase() ? "rgba(255,255,255,0.95)" : "rgba(0,0,0,0.8)";
+  }
+
+  // 浮水印：彩色文字 + 環繞光暈（描邊感），回傳 dataUrl 與 mm 尺寸
   function renderWatermark(text, fontMm, colorHex) {
     const dpi = 300;
     const pxPerMm = dpi / 25.4;
     const fontPx = fontMm * pxPerMm;
     measCtx.font = `700 ${fontPx}px ${FONT_STACK}`;
     const tw = Math.ceil(measCtx.measureText(text).width);
-    const off = Math.max(1, Math.round(fontPx * 0.06)); // 陰影位移
-    const w = tw + off * 3;
-    const h = Math.ceil(fontPx * 1.3) + off * 2;
+    const blur = Math.max(2, Math.round(fontPx * 0.2));   // 光暈模糊半徑
+    const pad = blur + Math.round(fontPx * 0.12);          // 預留光暈空間，避免被裁切
+    const w = tw + pad * 2;
+    const h = Math.ceil(fontPx * 1.3) + pad * 2;
     const c = document.createElement("canvas");
     c.width = Math.max(1, w); c.height = h;
     const cx = c.getContext("2d");
     cx.font = `700 ${fontPx}px ${FONT_STACK}`;
     cx.textBaseline = "middle";
     cx.textAlign = "left";
-    cx.fillStyle = "rgba(0,0,0,0.55)";
-    cx.fillText(text, off + off, h / 2 + off);
+    const halo = wmHalo(colorHex);
+    // 以光暈色 + 模糊陰影，疊數次形成環繞描邊
+    cx.shadowColor = halo;
+    cx.shadowBlur = blur;
+    cx.fillStyle = halo;
+    for (let k = 0; k < 4; k++) cx.fillText(text, pad, h / 2);
+    // 再畫一次純色（無陰影），文字邊緣清晰
+    cx.shadowColor = "transparent";
+    cx.shadowBlur = 0;
     cx.fillStyle = colorHex;
-    cx.fillText(text, off, h / 2);
+    cx.fillText(text, pad, h / 2);
     return { dataUrl: c.toDataURL("image/png"), wMm: c.width / pxPerMm, hMm: c.height / pxPerMm };
   }
 

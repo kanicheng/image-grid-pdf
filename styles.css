@@ -352,7 +352,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; }
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
-  text-shadow: 0 0 1px rgba(0,0,0,.55), 0 1px 1px rgba(0,0,0,.45);
   pointer-events: none;
 }
 .cell__caption, .cell__desc {
